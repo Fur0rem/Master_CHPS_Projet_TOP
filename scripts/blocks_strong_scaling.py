@@ -19,6 +19,7 @@ MAX_THREADS = int(subprocess.check_output("lscpu -p | egrep -v '^#' | sort -u -t
 print("Max threads:", MAX_THREADS)
 
 # Build the benchmark executable
+subprocess.run(["cmake", "-S", ".", "-B", "build", "-DCMAKE_BUILD_TYPE=Release"])
 subprocess.run(["cmake", "--build", "build"])
 
 def launch_with_nb_threads(executable: str, nb_threads: int) -> str:
@@ -92,7 +93,7 @@ def parse_output(output: str) -> dict:
 		}
 	return results	
 
-outputs = run_benchmark("top.benchmark_cache_blocking")
+outputs = run_benchmark("top.cache_blocking")
 
 for key, value in outputs.items():
 	outputs[key] = parse_output(value)

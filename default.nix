@@ -15,6 +15,16 @@ in pkgs.mkShell {
     typst
     hwloc
     python3
+    vulkan-tools
+    vulkan-loader
+    vulkan-headers
+    vulkan-tools-lunarg
+    vulkan-validation-layers
+    vulkan-extension-layer
+    vulkan-memory-allocator
+    vulkan-utility-libraries
+    shaderc
+    llvmPackages.openmp
       (python3.withPackages(ps: with ps; [matplotlib]))
     ];
   NIX_ENFORCE_NO_NATIVE=0; # Enable native compilation

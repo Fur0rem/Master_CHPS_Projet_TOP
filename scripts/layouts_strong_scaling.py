@@ -16,6 +16,7 @@ MAX_THREADS = int(subprocess.check_output("lscpu -p | egrep -v '^#' | sort -u -t
 print("Max threads:", MAX_THREADS)
 
 # Build the benchmark executable
+subprocess.run(["cmake", "-S", ".", "-B", "build", "-DCMAKE_BUILD_TYPE=Release"])
 subprocess.run(["cmake", "--build", "build"])
 
 def launch_with_nb_threads(executable: str, nb_threads: int) -> str:
@@ -197,5 +198,5 @@ def run_benchmark(executable: str, result_name: str):
 				f.write(f"{name}: {all_results[n_threads][name]}\n")
 			f.write("\n")
 
-run_benchmark("top.benchmark_layout_all", "strong_scaling_layout_all")
-run_benchmark("top.benchmark_layout_minus_outliers", "strong_scaling_layout_minus_outliers")
+run_benchmark("top.layout_all", "strong_scaling_layout_all")
+run_benchmark("top.layout_minus_outliers", "strong_scaling_layout_minus_outliers")

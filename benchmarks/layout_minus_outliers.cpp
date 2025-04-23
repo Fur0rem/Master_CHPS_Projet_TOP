@@ -19,9 +19,9 @@ auto main(int argc, char* argv[]) -> int {
 	srand48(42);
 
 	// Dimensions of the matrices
-	int m = 1000;
-	int n = 1000;
-	int k = 1000;
+	int m = 2000;
+	int n = 2000;
+	int k = 2000;
 
 	// Generate A, B, C, with right layout
 	RightMatrix A_right = RightMatrix("A_right", m, k);
@@ -46,16 +46,16 @@ auto main(int argc, char* argv[]) -> int {
 	// Compare all the different layout combinations
 	std::ostringstream oss;
 	auto result = ankerl::nanobench::Bench()
-			  .minEpochIterations(5)
+			  .minEpochIterations(3)
 			  .performanceCounters(true)
 			  .output(&oss)
 			  // Binary combinations of A, B, C (r/l with right/left layout)
 			  .run("Ar_Br_Cr", [&]() { matrix_product_reference(alpha, A_right, B_right, beta, C_right); })
-			  .run("Ar_Br_Cl", [&]() { matrix_product_reference(alpha, A_right, B_right, beta, C_left); })
+			  //   .run("Ar_Br_Cl", [&]() { matrix_product_reference(alpha, A_right, B_right, beta, C_left); })
 			  .run("Ar_Bl_Cr", [&]() { matrix_product_reference(alpha, A_right, B_left, beta, C_right); })
-			  .run("Ar_Bl_Cl", [&]() { matrix_product_reference(alpha, A_right, B_left, beta, C_left); })
-			  .run("Al_Bl_Cr", [&]() { matrix_product_reference(alpha, A_left, B_left, beta, C_right); })
-			  .run("Al_Bl_Cl", [&]() { matrix_product_reference(alpha, A_left, B_left, beta, C_left); })
+			  //   .run("Ar_Bl_Cl", [&]() { matrix_product_reference(alpha, A_right, B_left, beta, C_left); })
+			  //   .run("Al_Bl_Cr", [&]() { matrix_product_reference(alpha, A_left, B_left, beta, C_right); })
+			  //   .run("Al_Bl_Cl", [&]() { matrix_product_reference(alpha, A_left, B_left, beta, C_left); })
 			  .doNotOptimizeAway(A_right)
 			  .doNotOptimizeAway(B_right)
 			  .doNotOptimizeAway(C_right)

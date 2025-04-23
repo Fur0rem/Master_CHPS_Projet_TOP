@@ -1,5 +1,10 @@
 add_executable(top.check_same_results)
 target_sources(top.check_same_results PRIVATE check_same_results.cpp)
 target_include_directories(top.check_same_results PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_compile_options(top.check_same_results PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(top.check_same_results PRIVATE Kokkos::kokkos fmt::fmt)
+
+add_executable(top.check_gpu_implem)
+target_sources(top.check_gpu_implem PRIVATE check_gpu_implem.cpp)
+target_include_directories(top.check_gpu_implem PRIVATE ${CMAKE_SOURCE_DIR}/culkan)
+target_include_directories(top.check_gpu_implem PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(top.check_gpu_implem PRIVATE Kokkos::kokkos fmt::fmt)
