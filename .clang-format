@@ -1,0 +1,27 @@
+UseTab: Always
+TabWidth: 8
+IndentWidth: 8
+BasedOnStyle: LLVM
+PointerAlignment: Left
+SpaceAfterCStyleCast: false
+BreakBeforeBraces: Custom
+AlignArrayOfStructures: None
+BraceWrapping:
+  AfterStruct: false
+  AfterUnion: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterExternBlock: false
+  BeforeElse: true
+ColumnLimit: 140
+IndentCaseLabels: true
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Empty
+AlignConsecutiveMacros: true
+IndentPPDirectives: AfterHash
+AlignConsecutiveAssignments: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+BinPackArguments: false
+SortIncludes: true

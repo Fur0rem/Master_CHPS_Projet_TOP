@@ -1,0 +1,5 @@
+add_executable(top.check_same_results)
+target_sources(top.check_same_results PRIVATE check_same_results.cpp)
+target_include_directories(top.check_same_results PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_compile_options(top.check_same_results PRIVATE -Wall -Wextra -Wpedantic)
+target_link_libraries(top.check_same_results PRIVATE Kokkos::kokkos fmt::fmt)
