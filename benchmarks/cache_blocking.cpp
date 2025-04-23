@@ -1,6 +1,6 @@
 /**
- * @file benchmarks/benchmark_layout_minus_outliers.cpp
- * @brief Benchmark for matrix product with different layouts minus the 2 outliers. Also uses bigger matrices.
+ * @file benchmarks/cache_blocking.cpp
+ * @brief Benchmark for matrix product with cache blocking.
  */
 
 #include "matrix_product.hpp"

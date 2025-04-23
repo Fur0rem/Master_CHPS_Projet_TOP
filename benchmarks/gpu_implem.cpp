@@ -1,6 +1,6 @@
 /**
- * @file benchmarks/benchmark_layout_all.cpp
- * @brief Benchmark for matrix product with all different layouts. Uses smaller matrices.
+ * @file benchmarks/gpu_implem.cpp
+ * @brief Benchmarking the GPU implementation of the matrix product compared to the CPU implementation.
  */
 
 #include "matrix_product.hpp"
@@ -44,7 +44,7 @@ auto main(int argc, char* argv[]) -> int {
 		double alpha = drand48();
 		double beta  = drand48();
 
-		// GPU implementation
+		// Bindings of the shader
 		CulkanBinding bindings[] = {
 		    // Binding for n
 		    {.size = sizeof(int), .type = UNIFORM_BUFFER},
@@ -83,6 +83,7 @@ auto main(int argc, char* argv[]) -> int {
 				  .run(fmt::format("CPU {}", size), [&]() { matrix_product_cache_blocked_i(alpha, A, B, beta, C, 8); })
 				  .run("GPU with memory overhead",
 				       [&]() {
+					       // Send the data to the GPU
 					       culkanWriteBinding(culkan, 0, &n);
 					       culkanWriteBinding(culkan, 1, &m);
 					       culkanWriteBinding(culkan, 2, &k);
@@ -92,10 +93,11 @@ auto main(int argc, char* argv[]) -> int {
 					       culkanWriteBinding(culkan, 6, &alpha);
 					       culkanWriteBinding(culkan, 7, &beta);
 
-					       culkanSetup(culkan);
-
 					       // Do the GPU computation
+					       culkanSetup(culkan);
 					       culkanRun(culkan);
+
+					       // Read the result from the GPU
 					       double* result = (double*)malloc(m * n * sizeof(double));
 					       culkanReadBinding(culkan, 5, result);
 					       free(result);

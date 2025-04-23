@@ -1,3 +1,8 @@
+/**
+ * @file tests/check_gpu_implem.cpp
+ * @brief Test for the GPU implementation of the matrix product.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 

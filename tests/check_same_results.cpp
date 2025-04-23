@@ -1,6 +1,6 @@
 /**
  * @file tests/check_same_results.cpp
- * @brief Test for matrix product functions.
+ * @brief Test for matrix product functions with different layouts and cache blocking.
  */
 
 #include "matrix_product.hpp"

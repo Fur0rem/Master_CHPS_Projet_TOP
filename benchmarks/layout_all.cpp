@@ -1,5 +1,5 @@
 /**
- * @file benchmarks/benchmark_layout_all.cpp
+ * @file benchmarks/layout_all.cpp
  * @brief Benchmark for matrix product with all different layouts. Uses smaller matrices.
  */
 

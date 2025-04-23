@@ -1,5 +1,5 @@
 /**
- * @file benchmarks/benchmark_layout_minus_outliers.cpp
+ * @file benchmarks/layout_minus_outliers.cpp
  * @brief Benchmark for matrix product with different layouts minus the 2 outliers. Also uses bigger matrices.
  */
 
@@ -9,8 +9,6 @@
 #include <cstdlib>
 #include <fmt/core.h>
 #include <nanobench.h>
-
-#include <iostream>
 
 auto main(int argc, char* argv[]) -> int {
 	Kokkos::initialize(argc, argv);

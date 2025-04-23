@@ -56,6 +56,8 @@ auto matrix_product_cache_blocked_i(double alpha, RightMatrix const& A, LeftMatr
 	    "dgemm_kernel", (A.extent(0) + block_size) / block_size, KOKKOS_LAMBDA(int _bi) {
 		    int bi = _bi * block_size;
 		    for (int j = 0; j < int(B.extent(1)); j += 1) {
+
+			    // Block i
 			    for (int i = bi; i < std::min(bi + block_size, int(A.extent(0))); i++) {
 				    double acc = 0.0;
 				    for (int k = 0; k < int(A.extent(1)); k++) {
@@ -78,7 +80,10 @@ auto matrix_product_cache_blocked_ij(double alpha, RightMatrix const& A, LeftMat
 	    "dgemm_kernel", (A.extent(0) + block_size) / block_size, KOKKOS_LAMBDA(int _bi) {
 		    int bi = _bi * block_size;
 		    for (int bj = 0; bj < int(B.extent(1)); bj += block_size) {
+
+			    // Block i
 			    for (int i = bi; i < std::min(bi + block_size, int(A.extent(0))); i++) {
+				    // Block j
 				    for (int j = bj; j < std::min(bj + block_size, int(B.extent(1))); j++) {
 					    double acc = 0.0;
 					    for (int k = 0; k < int(A.extent(1)); k++) {
@@ -101,11 +106,15 @@ auto matrix_product_cache_blocked_ijk(double alpha, RightMatrix const& A, LeftMa
 	Kokkos::parallel_for(
 	    "dgemm_kernel", (A.extent(0) + block_size) / block_size, KOKKOS_LAMBDA(int _bi) {
 		    int bi	     = _bi * block_size;
-		    RightMatrix accs = RightMatrix("accs", block_size, block_size);
+		    RightMatrix accs = RightMatrix("accs", block_size, block_size); // Accumulator for elements of the block
 		    for (int bj = 0; bj < int(B.extent(1)); bj += block_size) {
 			    for (int bk = 0; bk < int(A.extent(1)); bk += block_size) {
+
+				    // Block i
 				    for (int i = bi; i < std::min(bi + block_size, int(A.extent(0))); i++) {
+					    // Block j
 					    for (int j = bj; j < std::min(bj + block_size, int(B.extent(1))); j++) {
+						    // Block k
 						    for (int k = bk; k < std::min(bk + block_size, int(A.extent(1))); k++) {
 							    double acc = 0.0;
 							    for (int k = 0; k < int(A.extent(1)); k++) {
@@ -116,6 +125,8 @@ auto matrix_product_cache_blocked_ijk(double alpha, RightMatrix const& A, LeftMa
 					    }
 				    }
 			    }
+
+			    // Do the final multiplication once you're done with all the (i, j) of the block
 			    for (int i = bi; i < std::min(bi + block_size, int(A.extent(0))); i++) {
 				    for (int j = bj; j < std::min(bj + block_size, int(B.extent(1))); j++) {
 					    C(i, j) *= beta + (alpha * accs(i - bi, j - bj));
