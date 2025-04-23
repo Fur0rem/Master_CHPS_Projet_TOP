@@ -13,6 +13,7 @@ in pkgs.mkShell {
     mpi
     linuxPackages_latest.perf
     typst
+    hwloc
     python3
       (python3.withPackages(ps: with ps; [matplotlib]))
     ];

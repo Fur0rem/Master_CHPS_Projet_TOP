@@ -118,7 +118,7 @@ def run_benchmark(executable: str, result_name: str):
 		if name in markers:
 			x = list(range(1, MAX_THREADS + 1))  # Number of threads
 			y_med = [result[2] for result in results[name]]  # Median values
-			y_err = [(result[1] - result[0]) / 2 for result in results[name]]  # Error bars (half the range between min and max)
+			y_err = [(result[1] - result[0]) / 2 for result in results[name]]  # Error bars (half the range)
 			colour, marker, fillstyle = markers[name]
 			ax_plot.errorbar(x, y_med, yerr=y_err, label=name, 
 							marker=marker, markersize=10, fillstyle=fillstyle,

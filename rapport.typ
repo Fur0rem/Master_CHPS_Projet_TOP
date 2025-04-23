@@ -178,7 +178,7 @@ Donc pour ranger les éléments d'une matrice en mémoire, nous avons 2 choix, e
 
 Kokkos nous permet de choisir le layout mémoire de nos matrices avec les vues #emph[Kokkos::LayoutRight] pour le row-major et #emph[Kokkos::LayoutLeft] pour le column-major.
 
-Comme nous avons 3 matrices, il y a 2 ^ 3 = 8 combinaisons de layouts possibles (soit LayoutRight, soit LayoutLeft pour $A$, $B$, $C$)
+Comme nous avons 3 matrices, il y a $2^3 = 8$ combinaisons de layouts possibles (soit LayoutRight, soit LayoutLeft pour $A$, $B$, $C$)
 
 D'abord, je voulais faire une étude en strong scaling sur une matrice de taille $1000 * 1000$, mais j'ai vite remarqué que cela prennait anormalement trop de temps.
 J'ai donc d'abord testé sur des plus petites matrices, de taille $200 * 200$
@@ -188,7 +188,7 @@ J'ai donc d'abord testé sur des plus petites matrices, de taille $200 * 200$
 		"results/strong_scaling_layout_all.svg",
 		width: 100%
 	),
-	caption: "Étude en strong scaling de l'impact des layouts mémoire sur les performances sur des matrices 200x200"
+	caption: "Étude en strong scaling de l'impact des layouts mémoire sur les performances sur des matrices 200x200. Le plus bas est mieux."
 )
 
 Nous pouvons immédiatement remarquer que 2 combinaisons produisent des résultats abhérents, celles qui ont $A$ en #emph[LayoutLeft] et $B$ en #emph[LayoutRight].
@@ -231,6 +231,8 @@ Maintenant que les combinaisons de Layouts mémoire problématiques ont été id
 
 Les 2 meilleures combinaisons ont utilisé #emph[LayoutRight] pour $A$, #emph[LayoutLeft] pour $B$.
 En effet, entre 2 itérations de la boucle la plus interne $k$, nous accédons à la même ligne de $A$ et la même colonne de $B$, donc avoir les lignes de $A$ contiguës et les colonnes de $B$ contiguës permet d'avoir un maximum de localité spatiale.
+
+Nous pouvons aussi voir que les mesures sont similaires par paires, lorsque seul C change de layout.
 $C$ étant accédée bien moins souvent ($i * j$ fois comparée à $i * j * k$ accès à $A$ et $B$) lors du calcul, il n'est pas surprenant de voir que son layout n'a pas d'impact considérable sur les performances.
 
 = Autres optimisations
@@ -242,7 +244,6 @@ Le cache blocking est une optimisation classique qui consiste à changer l'ordre
 === Mesure des cache hits et cache misses
 
 === Implémentation et vérification de l'algorithme
-
 
 ==== Implémentation 
 Pour l'instruction la plus interne de notre kernel ```acc += alpha * A(i, k) * B(k, j);```, la colonne $j$ de $B$ est chargée en mémoire, il serait donc intéressant ici de la réutiliser pour les autres itérations de $i$ et $k$.
@@ -276,9 +277,9 @@ for (int i = 0; i < int(A.extent(0)); i += block_size) {
 , caption: "Kernel sans et avec cache blocking sur i")
 Note: J'ai omit des détails comme la gestion de matrices dont la taille n'est pas divisible par la taille du block par soucis de clarté ici.
 
-On peut réappliquer ce principe pour faire des portions d'itérations de boucles à l'intérieur les unes des autres, et avoir du cache blocking sur i, j, et k.
+On peut réappliquer ce principe pour faire des portions d'itérations de boucles à l'intérieur les unes des autres, et avoir du cache blocking sur $i$, $j$, et $k$.
 
-Cependant, pour k, le cache blocking est moins trivial.
+Cependant, pour $k$, le cache blocking est moins trivial.
 En effet, pour chaque élément de la matrice $C$, nous devons faire attention à ce que l'accumulation est terminée avant de multiplier le tout.
 
 Pour pouvoir faire des portions d'itérations $i$ et $j$ à l'intérieur de la boucle $k$, il faut créer une matrice temporaire contenant tous les accumulateurs pour tous les éléments des blocs des sous-itérations i et j.
@@ -299,14 +300,45 @@ Ce n'est pas une preuve, mais l'addition étant (théoriquement) associative, il
 === Étude en strong scaling et tunning de la taille des blocs
 
 Trouver la meilleur taille de blocs peut être fait de manière empirique, en testant différentes tailles de blocs et en mesurant le temps d'exécution.
-Nous allons donc tester des tailles de blocs de 1 à 256 (par puissances de 2), et mesurer le temps d'exécution pour chaque taille de block sur une matrice de taille $1000 * 1000$, avec chaque niveau de blocking (sur $i$, sur $i j$, et sur $i j k$)
+Nous allons donc tester des tailles de blocs de 4, 8, 16, 32, 64, et 128, et mesurer le temps d'exécution pour chaque taille de block sur une matrice de taille $2000 * 2000$ (afin de mieux voir les gains), avec chaque niveau de blocking : sur $i$, sur $i j$, et sur $i j k$.
+Le cache blocking sur $j$ uniquement étant inutile car on ne change pas l'ordre des itérations (i, j) 
 
-TODO graphe
 
-Nous observons qu'un bloc de taille 32 est le meilleur.
-Afin de mieux observer l'impact du cache blocking, mesurons son impact sur une matrice plus grosse ($2000 * 2000$)
+J'ai vite remarqué que le cache blocking sur $i j k$ était aussi anormalement long comparé à celui sur $i$ et sur $i j$, donc je l'ai omis de l'étude.
+Je pense que cela est dû au fait que k est la variable la plus interne, donc comme on travaille sur toute la ligne de $A$ et toute la colonne de $B$, faire une partie de l'itération $k$, changer de ligne pour $A$ ($i$) et de colonne de $B$ ($j$), puis revenir sur les anciens $i$ et $j$ est très coûteux.
 
-TODO graphe
+Aussi, j'ai remarqué que les gains ne s'arrêtaient pas lorsqu'on augmente le nombre de threads au-delà de mon nombre de cœurs physiques (6). Donc ici, j'ai fait une étude jusqu'à 12 threads (6 cœurs physiques hyperthreadés).
+
+#grid(
+	columns: 2,
+	rows: 1,
+	row-gutter: 0.2cm,
+
+	figure(
+		image(
+			"results/strong_scaling_cache_blocking_i.svg",
+			width: 100%
+		),
+		caption: "Étude en strong scaling de l'impact du cache blocking sur i sur les performances. Le plus bas est mieux."
+	)
+	,
+	figure(
+		image(
+			"results/strong_scaling_cache_blocking_ij.svg",
+			width: 100%
+		),
+		caption: "Étude en strong scaling de l'impact du cache blocking sur i et j sur les performances. Le plus bas est mieux."
+	)
+)
+
+Nous pouvons voir que le cache blocking sur $i$ apporte des gains de performances pour des blocs de taille 4 à 32, avec 8 étant la meilleure taille de bloc.
+De plus, les courbes sont plus lisses, et donc plus prévisibles, ce qui est un bon point.
+Pour 64, le cache-blocking semble n'avoir aucun avantage sur l'implémentation sans cache-blocking, et pour 128, il est même moins performant.
+
+Pour le cache blocking sur $i$ et $j$, il y a un gain de performance quelque soit la taille de bloc, mais pas autant que pour le cache blocking sur $i$ pour les petites tailles de blocs.
+Le cache blocking sur $i$ et $j$ semble donc plus robuste et général que celui sur $i$ uniquement, mais avec un gain de performance moins important.
+
+D'après les tests, le cache blocking sur $i$ avec une taille de bloc de 8 semble être le meilleur choix. Mais peut-être que d'autres tailles de blocs seraient meilleures pour d'autres tailles de matrices, ou d'autres machines.
 
 === Analyse de l'amélioration de la localité temporelle
 
@@ -333,6 +365,9 @@ Pour une matrice de taille $1500 * 1500$, nous sommes passés de XX à YY, où u
 Cependant, il est important de noter que les performances dépendent de la taille de la matrice, et que pour des matrices plus petites, l'implémentation CPU est plus performante.
 
 
+
+
+
 #let appendix(body) = {
 	set heading(numbering: "A", supplement: [Appendix])
 	counter(heading).update(0)
@@ -345,20 +380,55 @@ Cependant, il est important de noter que les performances dépendent de la taill
 
 == Hardware
 
+Informations obtenues grâce à lscpu :
+- CPU AMD Ryzen 5 5500U, architecture x86_64, fréquence de base de 2100 MHz, turbo de 4056 MHz, capable de SIMD jusqu'à 256 bits (avx2, sse4.1)
+
+Informations obtenues grâce à des sites externes de hardware #footnote[https://nanoreview.net/en/cpu/amd-ryzen-5-5500u] :
+- GPU intégré Radeon Graphics RX Vega 7, fréquence de base de 300 MHz, turbo de 1800 MHz, 448 shading units, 7 execution units, capable de 1.6 TFLOP/s théoriquement.
+
+Configuration obtenue grâce à lstopo :
+```
+Machine (7261MB total)
+  Package L#0
+    NUMANode L#0 (P#0 7261MB)
+    L3 L#0 (4096KB)
+      L2 L#0 (512KB) + L1d L#0 (32KB) + L1i L#0 (32KB) + Core L#0
+        PU L#0 (P#0)
+        PU L#1 (P#1)
+      L2 L#1 (512KB) + L1d L#1 (32KB) + L1i L#1 (32KB) + Core L#1
+        PU L#2 (P#2)
+        PU L#3 (P#3)
+      L2 L#2 (512KB) + L1d L#2 (32KB) + L1i L#2 (32KB) + Core L#2
+        PU L#4 (P#4)
+        PU L#5 (P#5)
+    L3 L#1 (4096KB)
+      L2 L#3 (512KB) + L1d L#3 (32KB) + L1i L#3 (32KB) + Core L#3
+        PU L#6 (P#6)
+        PU L#7 (P#7)
+      L2 L#4 (512KB) + L1d L#4 (32KB) + L1i L#4 (32KB) + Core L#4
+        PU L#8 (P#8)
+        PU L#9 (P#9)
+      L2 L#5 (512KB) + L1d L#5 (32KB) + L1i L#5 (32KB) + Core L#5
+        PU L#10 (P#10)
+        PU L#11 (P#11)
+```
+
+Ma machine est constituée de 6 cœurs physiques, chacun hyperthreadé pour un total de 12 cœurs logiques.
+
+Aussi, ma machine possède 8Go de RAM, 2 caches L3 de taille 4096KB partagés entre triplets de cœurs physiques.
+Chaque cœur physique possède 1 cache L2 de 512KB + 1 cache L1 d'instructions et 1 cache L1 de données tous deux de 32KB.
+
 == Linux
 
-Distribution NixOS 24.05
-
-Kernel linux 6.6.68
+- Distribution NixOS 24.05
+- Kernel linux 6.6.68
 
 == Software
 
-Compilateur: gcc 14.2.1
-
-OpenMP 4.5
-
-Kokkos 4.6.0 avec backend OpenMP
-
-nanobench 4.3.11
-
-perf 6.14.2
+- Compilateur: gcc 14.2.1
+- OpenMP 4.5
+- Kokkos 4.6.0 avec backend OpenMP
+- nanobench 4.3.11
+- perf 6.14.2
+- lstopo 2.10.0
+- lscpu de util-linux 2.39.4

@@ -35,31 +35,50 @@ auto main(int argc, char* argv[]) -> int {
 	double alpha = drand48();
 	double beta  = drand48();
 
-	// Compare all the different layout combinations
+	// No cache blocking
 	std::ostringstream oss;
-	auto result = ankerl::nanobench::Bench()
-			  .minEpochIterations(5)
-			  .performanceCounters(true)
-			  .output(&oss)
-			  // Binary combinations of A, B, C (r/l with right/left layout)
-			  .run("Reference", [&]() { matrix_product_reference(alpha, A, B, beta, C); })
-			  .run("Cache Blocked i32", [&]() { matrix_product_cache_blocked_i(alpha, A, B, beta, C, 32); })
-			  .run("Cache Blocked ij32", [&]() { matrix_product_cache_blocked_i(alpha, A, B, beta, C, 32); })
-			  .run("Cache Blocked ijk32", [&]() { matrix_product_cache_blocked_i(alpha, A, B, beta, C, 32); })
-			  .doNotOptimizeAway(A)
-			  .doNotOptimizeAway(B)
-			  .doNotOptimizeAway(C)
-			  .doNotOptimizeAway(alpha)
-			  .doNotOptimizeAway(beta)
-			  .results();
-
-	// Print oss
-	// std::cout << oss.str() << '\n';
-
-	for (auto const& res : result) {
+	auto reference = ankerl::nanobench::Bench()
+			     .epochs(5)
+			     .performanceCounters(true)
+			     .output(&oss)
+			     .run("No Cache Blocking", [&]() { matrix_product_reference(alpha, A, B, beta, C); })
+			     .doNotOptimizeAway(A)
+			     .doNotOptimizeAway(B)
+			     .doNotOptimizeAway(C)
+			     .doNotOptimizeAway(alpha)
+			     .doNotOptimizeAway(beta)
+			     .results();
+	for (auto const& res : reference) {
 		auto measure = res.fromString("elapsed");
 		auto name    = res.config().mBenchmarkName;
 		fmt::println("{}, Min: {}s, Max: {}s, Med: {}s", name, res.minimum(measure), res.maximum(measure), res.median(measure));
+	}
+
+	// Cache blocking
+	constexpr int block_sizes[] = {4, 8, 16, 32, 64, 128};
+	for (const auto& block_size : block_sizes) {
+		std::ostringstream oss;
+		auto result = ankerl::nanobench::Bench()
+				  .epochs(3)
+				  .performanceCounters(true)
+				  .output(&oss)
+				  // Run for i, ij (ijk is too slow)
+				  .run(fmt::format("Cache Blocked i{}", block_size),
+				       [&]() { matrix_product_cache_blocked_i(alpha, A, B, beta, C, block_size); })
+				  .run(fmt::format("Cache Blocked ij{}", block_size),
+				       [&]() { matrix_product_cache_blocked_ij(alpha, A, B, beta, C, block_size); })
+				  .doNotOptimizeAway(A)
+				  .doNotOptimizeAway(B)
+				  .doNotOptimizeAway(C)
+				  .doNotOptimizeAway(alpha)
+				  .doNotOptimizeAway(beta)
+				  .results();
+		for (auto const& res : result) {
+			auto measure = res.fromString("elapsed");
+			auto name    = res.config().mBenchmarkName;
+			fmt::println(
+			    "{}, Min: {}s, Max: {}s, Med: {}s", name, res.minimum(measure), res.maximum(measure), res.median(measure));
+		}
 	}
 
 	Kokkos::finalize();

@@ -53,15 +53,15 @@ auto matrix_product_cache_blocked_i(double alpha, RightMatrix const& A, LeftMatr
 	assert(A.extent(1) == B.extent(0));
 
 	Kokkos::parallel_for(
-	    "dgemm_kernel", (A.extent(0) + block_size) / block_size, KOKKOS_LAMBDA(int i_i) {
-		    int i = i_i * block_size;
+	    "dgemm_kernel", (A.extent(0) + block_size) / block_size, KOKKOS_LAMBDA(int _bi) {
+		    int bi = _bi * block_size;
 		    for (int j = 0; j < int(B.extent(1)); j += 1) {
-			    for (int ii = i; ii < std::min(i + block_size, int(A.extent(0))); ii++) {
+			    for (int i = bi; i < std::min(bi + block_size, int(A.extent(0))); i++) {
 				    double acc = 0.0;
 				    for (int k = 0; k < int(A.extent(1)); k++) {
-					    acc += A(ii, k) * B(k, j);
+					    acc += A(i, k) * B(k, j);
 				    }
-				    C(ii, j) *= beta + (alpha * acc);
+				    C(i, j) *= beta + (alpha * acc);
 			    }
 		    }
 	    });
@@ -75,16 +75,16 @@ auto matrix_product_cache_blocked_ij(double alpha, RightMatrix const& A, LeftMat
 	assert(A.extent(1) == B.extent(0));
 
 	Kokkos::parallel_for(
-	    "dgemm_kernel", (A.extent(0) + block_size) / block_size, KOKKOS_LAMBDA(int i) {
-		    int i_i = i * block_size;
-		    for (int j = 0; j < int(B.extent(1)); j += block_size) {
-			    for (int ii = i_i; ii < std::min(i_i + block_size, int(A.extent(0))); ii++) {
-				    for (int jj = j; jj < std::min(j + block_size, int(B.extent(1))); jj++) {
+	    "dgemm_kernel", (A.extent(0) + block_size) / block_size, KOKKOS_LAMBDA(int _bi) {
+		    int bi = _bi * block_size;
+		    for (int bj = 0; bj < int(B.extent(1)); bj += block_size) {
+			    for (int i = bi; i < std::min(bi + block_size, int(A.extent(0))); i++) {
+				    for (int j = bj; j < std::min(bj + block_size, int(B.extent(1))); j++) {
 					    double acc = 0.0;
 					    for (int k = 0; k < int(A.extent(1)); k++) {
-						    acc += A(ii, k) * B(k, jj);
+						    acc += A(i, k) * B(k, j);
 					    }
-					    C(ii, jj) *= beta + (alpha * acc);
+					    C(i, j) *= beta + (alpha * acc);
 				    }
 			    }
 		    }
@@ -98,28 +98,27 @@ auto matrix_product_cache_blocked_ijk(double alpha, RightMatrix const& A, LeftMa
 	assert(B.extent(1) == C.extent(1));
 	assert(A.extent(1) == B.extent(0));
 
-	// for (int i = 0; i < int(A.extent(0)); i += block_size) {
 	Kokkos::parallel_for(
-	    "dgemm_kernel", (A.extent(0) + block_size) / block_size, KOKKOS_LAMBDA(int i_i) {
-		    int i	     = i_i * block_size;
+	    "dgemm_kernel", (A.extent(0) + block_size) / block_size, KOKKOS_LAMBDA(int _bi) {
+		    int bi	     = _bi * block_size;
 		    RightMatrix accs = RightMatrix("accs", block_size, block_size);
-		    for (int j = 0; j < int(B.extent(1)); j += block_size) {
-			    for (int k = 0; k < int(A.extent(1)); k += block_size) {
-				    for (int ii = i; ii < std::min(i + block_size, int(A.extent(0))); ii++) {
-					    for (int jj = j; jj < std::min(j + block_size, int(B.extent(1))); jj++) {
-						    for (int kk = k; kk < std::min(k + block_size, int(A.extent(1))); kk++) {
+		    for (int bj = 0; bj < int(B.extent(1)); bj += block_size) {
+			    for (int bk = 0; bk < int(A.extent(1)); bk += block_size) {
+				    for (int i = bi; i < std::min(bi + block_size, int(A.extent(0))); i++) {
+					    for (int j = bj; j < std::min(bj + block_size, int(B.extent(1))); j++) {
+						    for (int k = bk; k < std::min(bk + block_size, int(A.extent(1))); k++) {
 							    double acc = 0.0;
 							    for (int k = 0; k < int(A.extent(1)); k++) {
-								    acc += A(ii, k) * B(k, jj);
+								    acc += A(i, k) * B(k, j);
 							    }
-							    accs(ii - i, jj - j) = acc;
+							    accs(i - bi, j - bj) = acc;
 						    }
 					    }
 				    }
 			    }
-			    for (int ii = i; ii < std::min(i + block_size, int(A.extent(0))); ii++) {
-				    for (int jj = j; jj < std::min(j + block_size, int(B.extent(1))); jj++) {
-					    C(ii, jj) *= beta + (alpha * accs(ii - i, jj - j));
+			    for (int i = bi; i < std::min(bi + block_size, int(A.extent(0))); i++) {
+				    for (int j = bj; j < std::min(bj + block_size, int(B.extent(1))); j++) {
+					    C(i, j) *= beta + (alpha * accs(i - bi, j - bj));
 				    }
 			    }
 		    }
